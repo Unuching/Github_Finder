@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import UserCard from './userCard';
 import RecentSearches from './recentsearches';
-
-import { fetchGithubUser } from '../api/github';
+import { useDebounce } from 'use-debounce';
+import { fetchGithubUser, searchGithubUser } from '../api/github';
+import type { GithubUser } from '../types';
 
 const UserSearch = () => {
   const [userName, setUserName] = useState('');
@@ -13,12 +14,21 @@ const UserSearch = () => {
     return stored ? JSON.parse(stored) : [];
   });
 
- 
+  const [debouncedUsername] = useDebounce(userName, 300);
 
-  const { data, isLoading, isError, error } = useQuery({
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  // query to search specific user
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['users', submittedUserName],
     queryFn: () => fetchGithubUser(submittedUserName),
     enabled: !!submittedUserName,
+  });
+
+  // query to get multiple user suggestions
+  const { data: suggestions } = useQuery({
+    queryKey: ['github-user-suggestions', debouncedUsername],
+    queryFn: () => searchGithubUser(debouncedUsername),
+    enabled: debouncedUsername.length > 1,
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -27,6 +37,7 @@ const UserSearch = () => {
     if (!trimmed) return;
 
     setSubmittedUserName(trimmed);
+    setUserName('');
 
     setRecentUsers((prev) => {
       const updated = [trimmed, ...prev.filter((u) => u !== trimmed)];
@@ -41,12 +52,46 @@ const UserSearch = () => {
   return (
     <>
       <form onSubmit={handleSubmit} className='form'>
-        <input
-          type='text'
-          placeholder='Enter Github Username...'
-          value={userName}
-          onChange={(e) => setUserName(e.target.value)}
-        />
+        <div className='dropdown-wrapper'>
+          <input
+            type='text'
+            placeholder='Enter Github Username...'
+            value={userName}
+            onChange={(e) => {
+              const val = e.target.value;
+              setUserName(val);
+              setShowSuggestions(val.trim().length > 1);
+            }}
+          />
+
+          {showSuggestions && suggestions?.length > 0 && (
+            <ul className='suggestions'>
+              {suggestions.slice(0, 5).map((user: GithubUser) => (
+                <li
+                  key={user.login}
+                  onClick={() => {
+                    setUserName(user.login);
+                    setShowSuggestions(false);
+
+                    if (submittedUserName !== user.login) {
+                      setSubmittedUserName(user.login);
+                    } else {
+                      refetch();
+                    }
+                  }}
+                >
+                  <img
+                    src={user.avatar_url}
+                    alt={user.login}
+                    className='avatar-xs'
+                  />
+                  {user.login}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <button type='submit'>Search</button>
       </form>
       {isLoading && <p className='status'>Loading...</p>}
