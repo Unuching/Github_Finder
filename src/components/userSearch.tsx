@@ -4,6 +4,7 @@ import UserCard from './userCard';
 import RecentSearches from './recentsearches';
 import { useDebounce } from 'use-debounce';
 import { fetchGithubUser, searchGithubUser } from '../api/github';
+import SuggestionDropdown from './suggestionDropdown';
 import type { GithubUser } from '../types';
 
 const UserSearch = () => {
@@ -65,30 +66,27 @@ const UserSearch = () => {
           />
 
           {showSuggestions && suggestions?.length > 0 && (
-            <ul className='suggestions'>
-              {suggestions.slice(0, 5).map((user: GithubUser) => (
-                <li
-                  key={user.login}
-                  onClick={() => {
-                    setUserName(user.login);
-                    setShowSuggestions(false);
-
-                    if (submittedUserName !== user.login) {
-                      setSubmittedUserName(user.login);
-                    } else {
-                      refetch();
-                    }
-                  }}
-                >
-                  <img
-                    src={user.avatar_url}
-                    alt={user.login}
-                    className='avatar-xs'
-                  />
-                  {user.login}
-                </li>
-              ))}
-            </ul>
+            <SuggestionDropdown
+              suggestions={suggestions}
+              show={showSuggestions}
+              onSelect={(selected) => {
+                setUserName(selected);
+                setShowSuggestions(false);
+                if (submittedUserName !== selected) {
+                  setSubmittedUserName(selected);
+                  setUserName('');
+                } else {
+                  refetch();
+                }
+                setRecentUsers((prev) => {
+                  const updated = [
+                    selected,
+                    ...prev.filter((u) => u !== selected),
+                  ];
+                  return updated.slice(0, 5);
+                });
+              }}
+            />
           )}
         </div>
 
