@@ -1,5 +1,7 @@
 import { FaGithubAlt } from 'react-icons/fa';
-const UserCard = ({ user }) => {
+import type { GithubUser } from '../types';
+
+const UserCard = ({ user }: { user: GithubUser }) => {
   return (
     <div className='user-card'>
       <img src={user.avatar_url} alt={user.name} className='avatar' />
