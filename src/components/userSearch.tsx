@@ -5,7 +5,6 @@ import RecentSearches from './recentsearches';
 import { useDebounce } from 'use-debounce';
 import { fetchGithubUser, searchGithubUser } from '../api/github';
 import SuggestionDropdown from './suggestionDropdown';
-import type { GithubUser } from '../types';
 
 const UserSearch = () => {
   const [userName, setUserName] = useState('');
