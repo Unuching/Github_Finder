@@ -1,7 +1,8 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { checkIfFollowing, followUser } from '../api/github';
+import { checkIfFollowing, followUser, unFollowUser } from '../api/github';
 import { FaGithubAlt, FaUserMinus, FaUserPlus } from 'react-icons/fa';
 import type { GithubUser } from '../types';
+import { toast } from 'sonner';
 
 const UserCard = ({ user }: { user: GithubUser }) => {
   const { data: isFollowing, refetch } = useQuery({
@@ -13,17 +14,30 @@ const UserCard = ({ user }: { user: GithubUser }) => {
   const followMutation = useMutation({
     mutationFn: () => followUser(user.login),
     onSuccess: () => {
-      console.log(`You are now following ${user.login}`);
+      toast.success(`You are now following ${user.login}`);
       refetch();
     },
     onError: (err) => {
-      console.error(err.message);
+      toast.error(err.message);
+    },
+  });
+
+  // unfollow mutation
+  const unFollowMutation = useMutation({
+    mutationFn: () => unFollowUser(user.login),
+    onSuccess: () => {
+      toast.success(`You have unFollowed ${user.login}`);
+      refetch();
+    },
+    onError: (err) => {
+      toast.error(err.message);
     },
   });
 
   const handleFollow = () => {
     if (isFollowing) {
       //todo unfollow
+      unFollowMutation.mutate();
     } else {
       followMutation.mutate();
     }
@@ -35,6 +49,7 @@ const UserCard = ({ user }: { user: GithubUser }) => {
       <p className='bio'>{user.bio}</p>
       <div className='user-card-buttons'>
         <button
+          disabled={followMutation.isPending || unFollowMutation.isPending}
           onClick={handleFollow}
           className={`follow-btn ${isFollowing ? 'following' : ''} `}
         >
